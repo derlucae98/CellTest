@@ -10,12 +10,14 @@ CONFIG += c++11
 
 SOURCES += \
     hp3478a.cpp \
+    logger.cpp \
     main.cpp \
     mainwindow.cpp \
     prologixgpib.cpp
 
 HEADERS += \
     hp3478a.h \
+    logger.h \
     mainwindow.h \
     prologixgpib.h
 

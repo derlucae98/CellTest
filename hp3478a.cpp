@@ -10,15 +10,35 @@ HP3478A::HP3478A(QObject *parent) : QObject(parent)
     QObject::connect(gpib, &PrologixGPIB::disconnected, this, &HP3478A::disconnected); //Forwarding signal
     QObject::connect(gpib, &PrologixGPIB::stateChanged, this, &HP3478A::stateChanged); //Forwarding signal
     QObject::connect(gpib, &PrologixGPIB::response, this, &HP3478A::convert_value);
+
 }
 
-void HP3478A::init(quint16 gpibAddress, QHostAddress ip)
+void HP3478A::init(quint16 addressVolt, quint16 addressAmp, QHostAddress ip)
 {
     if (!gpib) {
         return;
     }
-    this->gpibAddress = gpibAddress;
+    this->addressVolt = addressVolt;
+    this->addressAmp = addressAmp;
+    currentRequest = this->addressVolt;
     gpib->init(ip);
+//    reqMachine = new QStateMachine;
+//    QState *wait = new QState;
+//    QState *reqVolt = new QState;
+//    QState *convVolt = new QState;
+//    QState *reqAmp = new QState;
+//    QState *convAmp = new QState;
+
+
+//    wait->addTransition(this, &HP3478A::startConv, reqVolt);
+//    reqVolt->addTransition(this, &HP3478A::respVolt, convVolt);
+//    convVolt->addTransition(this, &HP3478A::convFinished, reqAmp);
+//    reqAmp->addTransition(this, &HP3478A::respAmp, convAmp);
+//    convAmp->addTransition(this, &HP3478A::convFinished, wait);
+
+//    QObject::connect(reqVolt, &QAbstractState::entered, this, [=] {get_value(this->addressVolt);});
+//    QObject::connect(convVolt, &QAbstractState)
+
 }
 
 void HP3478A::deinit()
@@ -29,41 +49,18 @@ void HP3478A::deinit()
     gpib->deinit();
 }
 
-void HP3478A::set_function(function_t function)
-{
-    if (!gpib) {
-        return;
-    }
-    switch (function) {
-    case HP3478A::DCV:
-        gpib->send_command(this->gpibAddress, "F1");
-        break;
-    case HP3478A::ACV:
-        gpib->send_command(this->gpibAddress, "F2");
-        break;
-    case HP3478A::TWO_WIRE_OHMS:
-        gpib->send_command(this->gpibAddress, "F3");
-        break;
-    case HP3478A::FOUR_WIRE_OHMS:
-        gpib->send_command(this->gpibAddress, "F4");
-        break;
-    case HP3478A::DCA:
-        gpib->send_command(this->gpibAddress, "F5");
-        break;
-    case HP3478A::ACA:
-        gpib->send_command(this->gpibAddress, "F6");
-        break;
-    default:
-        break;
-    }
-}
 
 void HP3478A::get_value()
 {
     if (!gpib) {
         return;
     }
-    gpib->send_command(this->gpibAddress, "++read eoi");
+    qDebug() << "Requesting DMM at address " << currentRequest;
+    if (currentRequest == this->addressVolt) {
+        gpib->send_command(addressVolt, "++read eoi");
+    } else if (currentRequest == this->addressAmp) {
+        gpib->send_command(addressAmp, "++read eoi");
+    }
 }
 
 bool HP3478A::is_out_of_range()
@@ -73,13 +70,20 @@ bool HP3478A::is_out_of_range()
 
 void HP3478A::convert_value(QString input)
 {
-    qDebug() << input;
+
     float value;
     if (input.at(0) == '+' || input.at(0) == '-') {
         //Check if the returned value is in the format of a value response
         value = input.toFloat();
-        qDebug() << value;
-        emit new_value(value);
+        qDebug() << "Got valid response from DMM at address " << currentRequest;
+        if (currentRequest == this->addressVolt) {
+            emit new_voltage(value);
+            currentRequest = this->addressAmp;
+            get_value();
+        } else if (currentRequest == this->addressAmp) {
+            emit new_current(value);
+            currentRequest = this->addressVolt;
+        }
     }
 }
 

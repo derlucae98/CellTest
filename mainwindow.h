@@ -6,6 +6,9 @@
 #include <QDebug>
 #include <QTimer>
 #include <hp3478a.h>
+#include <QDir>
+#include <QFileDialog>
+#include <logger.h>
 
 
 QT_BEGIN_NAMESPACE
@@ -24,6 +27,8 @@ private slots:
     void on_btnConnect_clicked();
 
 
+    void on_btnSelectPath_clicked();
+
 private:
     Ui::MainWindow *ui;
     HP3478A *hp3478a = nullptr;
@@ -32,6 +37,13 @@ private:
     void socket_connected();
     void socket_disconnected();
     bool connected;
-    void new_value(float val);
+    void new_voltage(float val);
+    void new_current(float val);
+    void update_logfile_path(QDir newPath);
+    QDir logfilePath;
+    float voltage;
+    float current;
+    double energy;
+    Logger *logger = nullptr;
 };
 #endif // MAINWINDOW_H
